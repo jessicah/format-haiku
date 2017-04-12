@@ -50,28 +50,6 @@ private:
 
   bool tryMergeTokens(ArrayRef<tok::TokenKind> Kinds, TokenType NewType);
 
-  // Returns \c true if \p Tok can only be followed by an operand in JavaScript.
-  bool precedesOperand(FormatToken *Tok);
-
-  bool canPrecedeRegexLiteral(FormatToken *Prev);
-
-  // Tries to parse a JavaScript Regex literal starting at the current token,
-  // if that begins with a slash and is in a location where JavaScript allows
-  // regex literals. Changes the current token to a regex literal and updates
-  // its text if successful.
-  void tryParseJSRegexLiteral();
-
-  // Handles JavaScript template strings.
-  //
-  // JavaScript template strings use backticks ('`') as delimiters, and allow
-  // embedding expressions nested in ${expr-here}. Template strings can be
-  // nested recursively, i.e. expressions can contain template strings in turn.
-  //
-  // The code below parses starting from a backtick, up to a closing backtick or
-  // an opening ${. It also maintains a stack of lexing contexts to handle
-  // nested template parts by balancing curly braces.
-  void handleTemplateStrings();
-
   bool tryMerge_TMacro();
 
   bool tryMergeConflictMarkers();

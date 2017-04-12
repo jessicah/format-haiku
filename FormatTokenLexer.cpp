@@ -46,10 +46,6 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
   assert(FirstInLineIndex == 0);
   do {
     Tokens.push_back(getNextToken());
-    if (Style.Language == FormatStyle::LK_JavaScript) {
-      tryParseJSRegexLiteral();
-      handleTemplateStrings();
-    }
     tryMergePreviousTokens();
     if (Tokens.back()->NewlinesBefore > 0 || Tokens.back()->IsMultiline)
       FirstInLineIndex = Tokens.size() - 1;
@@ -64,24 +60,6 @@ void FormatTokenLexer::tryMergePreviousTokens() {
     return;
   if (tryMergeLessLess())
     return;
-
-  if (Style.Language == FormatStyle::LK_JavaScript) {
-    static const tok::TokenKind JSIdentity[] = {tok::equalequal, tok::equal};
-    static const tok::TokenKind JSNotIdentity[] = {tok::exclaimequal,
-                                                   tok::equal};
-    static const tok::TokenKind JSShiftEqual[] = {tok::greater, tok::greater,
-                                                  tok::greaterequal};
-    static const tok::TokenKind JSRightArrow[] = {tok::equal, tok::greater};
-    // FIXME: Investigate what token type gives the correct operator priority.
-    if (tryMergeTokens(JSIdentity, TT_BinaryOperator))
-      return;
-    if (tryMergeTokens(JSNotIdentity, TT_BinaryOperator))
-      return;
-    if (tryMergeTokens(JSShiftEqual, TT_BinaryOperator))
-      return;
-    if (tryMergeTokens(JSRightArrow, TT_JsFatArrow))
-      return;
-  }
 }
 
 bool FormatTokenLexer::tryMergeLessLess() {
@@ -133,165 +111,6 @@ bool FormatTokenLexer::tryMergeTokens(ArrayRef<tok::TokenKind> Kinds,
   First[0]->ColumnWidth += AddLength;
   First[0]->Type = NewType;
   return true;
-}
-
-// Returns \c true if \p Tok can only be followed by an operand in JavaScript.
-bool FormatTokenLexer::precedesOperand(FormatToken *Tok) {
-  // NB: This is not entirely correct, as an r_paren can introduce an operand
-  // location in e.g. `if (foo) /bar/.exec(...);`. That is a rare enough
-  // corner case to not matter in practice, though.
-  return Tok->isOneOf(tok::period, tok::l_paren, tok::comma, tok::l_brace,
-                      tok::r_brace, tok::l_square, tok::semi, tok::exclaim,
-                      tok::colon, tok::question, tok::tilde) ||
-         Tok->isOneOf(tok::kw_return, tok::kw_do, tok::kw_case, tok::kw_throw,
-                      tok::kw_else, tok::kw_new, tok::kw_delete, tok::kw_void,
-                      tok::kw_typeof, Keywords.kw_instanceof, Keywords.kw_in) ||
-         Tok->isBinaryOperator();
-}
-
-bool FormatTokenLexer::canPrecedeRegexLiteral(FormatToken *Prev) {
-  if (!Prev)
-    return true;
-
-  // Regex literals can only follow after prefix unary operators, not after
-  // postfix unary operators. If the '++' is followed by a non-operand
-  // introducing token, the slash here is the operand and not the start of a
-  // regex.
-  if (Prev->isOneOf(tok::plusplus, tok::minusminus))
-    return (Tokens.size() < 3 || precedesOperand(Tokens[Tokens.size() - 3]));
-
-  // The previous token must introduce an operand location where regex
-  // literals can occur.
-  if (!precedesOperand(Prev))
-    return false;
-
-  return true;
-}
-
-// Tries to parse a JavaScript Regex literal starting at the current token,
-// if that begins with a slash and is in a location where JavaScript allows
-// regex literals. Changes the current token to a regex literal and updates
-// its text if successful.
-void FormatTokenLexer::tryParseJSRegexLiteral() {
-  FormatToken *RegexToken = Tokens.back();
-  if (!RegexToken->isOneOf(tok::slash, tok::slashequal))
-    return;
-
-  FormatToken *Prev = nullptr;
-  for (auto I = Tokens.rbegin() + 1, E = Tokens.rend(); I != E; ++I) {
-    // NB: Because previous pointers are not initialized yet, this cannot use
-    // Token.getPreviousNonComment.
-    if ((*I)->isNot(tok::comment)) {
-      Prev = *I;
-      break;
-    }
-  }
-
-  if (!canPrecedeRegexLiteral(Prev))
-    return;
-
-  // 'Manually' lex ahead in the current file buffer.
-  const char *Offset = Lex->getBufferLocation();
-  const char *RegexBegin = Offset - RegexToken->TokenText.size();
-  StringRef Buffer = Lex->getBuffer();
-  bool InCharacterClass = false;
-  bool HaveClosingSlash = false;
-  for (; !HaveClosingSlash && Offset != Buffer.end(); ++Offset) {
-    // Regular expressions are terminated with a '/', which can only be
-    // escaped using '\' or a character class between '[' and ']'.
-    // See http://www.ecma-international.org/ecma-262/5.1/#sec-7.8.5.
-    switch (*Offset) {
-    case '\\':
-      // Skip the escaped character.
-      ++Offset;
-      break;
-    case '[':
-      InCharacterClass = true;
-      break;
-    case ']':
-      InCharacterClass = false;
-      break;
-    case '/':
-      if (!InCharacterClass)
-        HaveClosingSlash = true;
-      break;
-    }
-  }
-
-  RegexToken->Type = TT_RegexLiteral;
-  // Treat regex literals like other string_literals.
-  RegexToken->Tok.setKind(tok::string_literal);
-  RegexToken->TokenText = StringRef(RegexBegin, Offset - RegexBegin);
-  RegexToken->ColumnWidth = RegexToken->TokenText.size();
-
-  resetLexer(SourceMgr.getFileOffset(Lex->getSourceLocation(Offset)));
-}
-
-void FormatTokenLexer::handleTemplateStrings() {
-  FormatToken *BacktickToken = Tokens.back();
-
-  if (BacktickToken->is(tok::l_brace)) {
-    StateStack.push(LexerState::NORMAL);
-    return;
-  }
-  if (BacktickToken->is(tok::r_brace)) {
-    if (StateStack.size() == 1)
-      return;
-    StateStack.pop();
-    if (StateStack.top() != LexerState::TEMPLATE_STRING)
-      return;
-    // If back in TEMPLATE_STRING, fallthrough and continue parsing the
-  } else if (BacktickToken->is(tok::unknown) &&
-             BacktickToken->TokenText == "`") {
-    StateStack.push(LexerState::TEMPLATE_STRING);
-  } else {
-    return; // Not actually a template
-  }
-
-  // 'Manually' lex ahead in the current file buffer.
-  const char *Offset = Lex->getBufferLocation();
-  const char *TmplBegin = Offset - BacktickToken->TokenText.size(); // at "`"
-  for (; Offset != Lex->getBuffer().end(); ++Offset) {
-    if (Offset[0] == '`') {
-      StateStack.pop();
-      break;
-    }
-    if (Offset[0] == '\\') {
-      ++Offset; // Skip the escaped character.
-    } else if (Offset + 1 < Lex->getBuffer().end() && Offset[0] == '$' &&
-               Offset[1] == '{') {
-      // '${' introduces an expression interpolation in the template string.
-      StateStack.push(LexerState::NORMAL);
-      ++Offset;
-      break;
-    }
-  }
-
-  StringRef LiteralText(TmplBegin, Offset - TmplBegin + 1);
-  BacktickToken->Type = TT_TemplateString;
-  BacktickToken->Tok.setKind(tok::string_literal);
-  BacktickToken->TokenText = LiteralText;
-
-  // Adjust width for potentially multiline string literals.
-  size_t FirstBreak = LiteralText.find('\n');
-  StringRef FirstLineText = FirstBreak == StringRef::npos
-                                ? LiteralText
-                                : LiteralText.substr(0, FirstBreak);
-  BacktickToken->ColumnWidth = encoding::columnWidthWithTabs(
-      FirstLineText, BacktickToken->OriginalColumn, Style.TabWidth, Encoding);
-  size_t LastBreak = LiteralText.rfind('\n');
-  if (LastBreak != StringRef::npos) {
-    BacktickToken->IsMultiline = true;
-    unsigned StartColumn = 0; // The template tail spans the entire line.
-    BacktickToken->LastLineColumnWidth = encoding::columnWidthWithTabs(
-        LiteralText.substr(LastBreak + 1, LiteralText.size()), StartColumn,
-        Style.TabWidth, Encoding);
-  }
-
-  SourceLocation loc = Offset < Lex->getBuffer().end()
-                           ? Lex->getSourceLocation(Offset + 1)
-                           : SourceMgr.getLocForEndOfFile(ID);
-  resetLexer(SourceMgr.getFileOffset(loc));
 }
 
 bool FormatTokenLexer::tryMerge_TMacro() {
@@ -511,17 +330,6 @@ FormatToken *FormatTokenLexer::getNextToken() {
     IdentifierInfo &Info = IdentTable.get(FormatTok->TokenText);
     FormatTok->Tok.setIdentifierInfo(&Info);
     FormatTok->Tok.setKind(Info.getTokenID());
-    if (Style.Language == FormatStyle::LK_Java &&
-        FormatTok->isOneOf(tok::kw_struct, tok::kw_union, tok::kw_delete,
-                           tok::kw_operator)) {
-      FormatTok->Tok.setKind(tok::identifier);
-      FormatTok->Tok.setIdentifierInfo(nullptr);
-    } else if (Style.Language == FormatStyle::LK_JavaScript &&
-               FormatTok->isOneOf(tok::kw_struct, tok::kw_union,
-                                  tok::kw_operator)) {
-      FormatTok->Tok.setKind(tok::identifier);
-      FormatTok->Tok.setIdentifierInfo(nullptr);
-    }
   } else if (FormatTok->Tok.is(tok::greatergreater)) {
     FormatTok->Tok.setKind(tok::greater);
     FormatTok->TokenText = FormatTok->TokenText.substr(0, 1);
@@ -558,8 +366,7 @@ FormatToken *FormatTokenLexer::getNextToken() {
     Column = FormatTok->LastLineColumnWidth;
   }
 
-  if (Style.Language == FormatStyle::LK_Cpp ||
-      Style.Language == FormatStyle::LK_ObjC) {
+  if (Style.Language == FormatStyle::LK_Cpp) {
     if (!(Tokens.size() > 0 && Tokens.back()->Tok.getIdentifierInfo() &&
           Tokens.back()->Tok.getIdentifierInfo()->getPPKeywordID() ==
               tok::pp_define) &&
@@ -588,15 +395,7 @@ void FormatTokenLexer::readRawToken(FormatToken &Tok) {
     if (!Tok.TokenText.empty() && Tok.TokenText[0] == '"') {
       Tok.Tok.setKind(tok::string_literal);
       Tok.IsUnterminatedLiteral = true;
-    } else if (Style.Language == FormatStyle::LK_JavaScript &&
-               Tok.TokenText == "''") {
-      Tok.Tok.setKind(tok::string_literal);
     }
-  }
-
-  if (Style.Language == FormatStyle::LK_JavaScript &&
-      Tok.is(tok::char_constant)) {
-    Tok.Tok.setKind(tok::string_literal);
   }
 
   if (Tok.is(tok::comment) && (Tok.TokenText == "// clang-format on" ||
