@@ -31,7 +31,7 @@ static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
 
 // Mark all our options with this category, everything else (except for -version
 // and -help) will be hidden.
-static cl::OptionCategory ClangFormatCategory("Clang-format options");
+static cl::OptionCategory ClangFormatCategory("Format Options");
 
 static cl::list<unsigned>
     Offsets("offset",
@@ -323,7 +323,7 @@ int main(int argc, const char **argv) {
   cl::SetVersionPrinter(PrintVersion);
   cl::ParseCommandLineOptions(
       argc, argv,
-      "A tool to format C/C++/Java/JavaScript/Objective-C/Protobuf code.\n\n"
+      "A tool to format C/C++ code that follows Haiku's style guidelines.\n\n"
       "If no arguments are specified, it formats the code from standard input\n"
       "and writes the result to the standard output.\n"
       "If <file>s are given, it reformats the files. If -i is specified\n"
