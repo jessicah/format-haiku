@@ -86,10 +86,7 @@ private:
   /// For example, 'public:' labels in classes are offset by 1 or 2
   /// characters to the left from their level.
   int getIndentOffset(const FormatToken &RootToken) {
-    if (RootToken.isAccessSpecifier(false) ||
-        RootToken.isObjCAccessSpecifier() ||
-        (RootToken.isOneOf(Keywords.kw_signals, Keywords.kw_qsignals) &&
-         RootToken.Next && RootToken.Next->is(tok::colon)))
+    if (RootToken.isAccessSpecifier(false))
       return Style.AccessModifierOffset;
     return 0;
   }
@@ -362,8 +359,7 @@ private:
     } else if (Limit != 0 && !Line.startsWith(tok::kw_namespace) &&
                !startsExternCBlock(Line)) {
       // We don't merge short records.
-      if (Line.First->isOneOf(tok::kw_class, tok::kw_union, tok::kw_struct,
-                              Keywords.kw_interface))
+      if (Line.First->isOneOf(tok::kw_class, tok::kw_union, tok::kw_struct))
         return 0;
 
       // Check that we still have three lines and they fit into the limit.

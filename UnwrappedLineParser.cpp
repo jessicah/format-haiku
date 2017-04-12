@@ -724,15 +724,6 @@ void UnwrappedLineParser::parseStructuralElement() {
                  /*MunchSemi=*/false);
       return;
     }
-    if (FormatTok->isOneOf(Keywords.kw_signals, Keywords.kw_qsignals,
-                           Keywords.kw_slots, Keywords.kw_qslots)) {
-      nextToken();
-      if (FormatTok->is(tok::colon)) {
-        nextToken();
-        addUnwrappedLine();
-        return;
-      }
-    }
     // In all other cases, parse the declaration.
     break;
   default:
@@ -765,9 +756,6 @@ void UnwrappedLineParser::parseStructuralElement() {
       break;
     case tok::kw_typedef:
       nextToken();
-      if (FormatTok->isOneOf(Keywords.kw_NS_ENUM, Keywords.kw_NS_OPTIONS,
-                             Keywords.kw_CF_ENUM, Keywords.kw_CF_OPTIONS))
-        parseEnum();
       break;
     case tok::kw_struct:
     case tok::kw_union:
@@ -862,16 +850,6 @@ void UnwrappedLineParser::parseStructuralElement() {
       break;
     }
     case tok::equal:
-      // Fat arrows (=>) have tok::TokenKind tok::equal but TokenType
-      // TT_JsFatArrow. The always start an expression or a child block if
-      // followed by a curly.
-      if (FormatTok->is(TT_JsFatArrow)) {
-        nextToken();
-        if (FormatTok->is(tok::l_brace))
-          parseChildBlock();
-        break;
-      }
-
       nextToken();
       if (FormatTok->Tok.is(tok::l_brace)) {
         parseBracedList();
@@ -1348,10 +1326,7 @@ void UnwrappedLineParser::parseSwitch() {
 
 void UnwrappedLineParser::parseAccessSpecifier() {
   nextToken();
-  // Understand Qt's slots.
-  if (FormatTok->isOneOf(Keywords.kw_slots, Keywords.kw_qslots))
-    nextToken();
-  // Otherwise, we don't know what it is, and we'd better keep the next token.
+  // We don't know what it is, and we'd better keep the next token.
   if (FormatTok->Tok.is(tok::colon))
     nextToken();
   addUnwrappedLine();

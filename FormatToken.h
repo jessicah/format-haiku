@@ -50,33 +50,17 @@ namespace format {
   TYPE(InheritanceColon) \
   TYPE(InlineASMBrace) \
   TYPE(InlineASMColon) \
-  TYPE(JavaAnnotation) \
-  TYPE(JsComputedPropertyName) \
-  TYPE(JsFatArrow) \
-  TYPE(JsTypeColon) \
-  TYPE(JsTypeOperator) \
-  TYPE(JsTypeOptionalQuestion) \
   TYPE(LambdaArrow) \
   TYPE(LambdaLSquare) \
-  TYPE(LeadingJavaAnnotation) \
   TYPE(LineComment) \
   TYPE(MacroBlockBegin) \
   TYPE(MacroBlockEnd) \
-  TYPE(ObjCBlockLBrace) \
-  TYPE(ObjCBlockLParen) \
-  TYPE(ObjCDecl) \
-  TYPE(ObjCForIn) \
-  TYPE(ObjCMethodExpr) \
-  TYPE(ObjCMethodSpecifier) \
-  TYPE(ObjCProperty) \
-  TYPE(ObjCStringLiteral) \
   TYPE(OverloadedOperator) \
   TYPE(OverloadedOperatorLParen) \
   TYPE(PointerOrReference) \
   TYPE(PureVirtualSpecifier) \
   TYPE(RangeBasedForLoopColon) \
   TYPE(RegexLiteral) \
-  TYPE(SelectorName) \
   TYPE(StartOfName) \
   TYPE(TemplateCloser) \
   TYPE(TemplateOpener) \
@@ -223,13 +207,6 @@ struct FormatToken {
   /// \brief Penalty for inserting a line break before this token.
   unsigned SplitPenalty = 0;
 
-  /// \brief If this is the first ObjC selector name in an ObjC method
-  /// definition or call, this contains the length of the longest name.
-  ///
-  /// This being set to 0 means that the selectors should not be colon-aligned,
-  /// e.g. because several of them are block-type.
-  unsigned LongestObjCSelectorName = 0;
-
   /// \brief Stores the number of required fake parentheses and the
   /// corresponding operator precedence.
   ///
@@ -313,10 +290,6 @@ struct FormatToken {
 
   bool isStringLiteral() const { return tok::isStringLiteral(Tok.getKind()); }
 
-  bool isObjCAtKeyword(tok::ObjCKeywordKind Kind) const {
-    return Tok.isObjCAtKeyword(Kind);
-  }
-
   bool isAccessSpecifier(bool ColonRequired = true) const {
     return isOneOf(tok::kw_public, tok::kw_protected, tok::kw_private) &&
            (!ColonRequired || (Next && Next->is(tok::colon)));
@@ -324,13 +297,6 @@ struct FormatToken {
 
   /// \brief Determine whether the token is a simple-type-specifier.
   bool isSimpleTypeSpecifier() const;
-
-  bool isObjCAccessSpecifier() const {
-    return is(tok::at) && Next && (Next->isObjCAtKeyword(tok::objc_public) ||
-                                   Next->isObjCAtKeyword(tok::objc_protected) ||
-                                   Next->isObjCAtKeyword(tok::objc_package) ||
-                                   Next->isObjCAtKeyword(tok::objc_private));
-  }
 
   /// \brief Returns whether \p Tok is ([{ or a template opening <.
   bool opensScope() const {
@@ -587,51 +553,9 @@ struct AdditionalKeywords {
     kw_override = &IdentTable.get("override");
     kw_in = &IdentTable.get("in");
     kw_of = &IdentTable.get("of");
-    kw_CF_ENUM = &IdentTable.get("CF_ENUM");
-    kw_CF_OPTIONS = &IdentTable.get("CF_OPTIONS");
-    kw_NS_ENUM = &IdentTable.get("NS_ENUM");
-    kw_NS_OPTIONS = &IdentTable.get("NS_OPTIONS");
-
-    kw_as = &IdentTable.get("as");
-    kw_async = &IdentTable.get("async");
-    kw_await = &IdentTable.get("await");
-    kw_declare = &IdentTable.get("declare");
-    kw_finally = &IdentTable.get("finally");
-    kw_from = &IdentTable.get("from");
-    kw_function = &IdentTable.get("function");
-    kw_import = &IdentTable.get("import");
-    kw_is = &IdentTable.get("is");
-    kw_let = &IdentTable.get("let");
-    kw_module = &IdentTable.get("module");
-    kw_type = &IdentTable.get("type");
-    kw_var = &IdentTable.get("var");
-    kw_yield = &IdentTable.get("yield");
-
-    kw_abstract = &IdentTable.get("abstract");
-    kw_assert = &IdentTable.get("assert");
-    kw_extends = &IdentTable.get("extends");
-    kw_implements = &IdentTable.get("implements");
-    kw_instanceof = &IdentTable.get("instanceof");
-    kw_interface = &IdentTable.get("interface");
-    kw_native = &IdentTable.get("native");
-    kw_package = &IdentTable.get("package");
-    kw_synchronized = &IdentTable.get("synchronized");
-    kw_throws = &IdentTable.get("throws");
     kw___except = &IdentTable.get("__except");
 
     kw_mark = &IdentTable.get("mark");
-
-    kw_extend = &IdentTable.get("extend");
-    kw_option = &IdentTable.get("option");
-    kw_optional = &IdentTable.get("optional");
-    kw_repeated = &IdentTable.get("repeated");
-    kw_required = &IdentTable.get("required");
-    kw_returns = &IdentTable.get("returns");
-
-    kw_signals = &IdentTable.get("signals");
-    kw_qsignals = &IdentTable.get("Q_SIGNALS");
-    kw_slots = &IdentTable.get("slots");
-    kw_qslots = &IdentTable.get("Q_SLOTS");
   }
 
   // Context sensitive keywords.
@@ -639,56 +563,10 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_override;
   IdentifierInfo *kw_in;
   IdentifierInfo *kw_of;
-  IdentifierInfo *kw_CF_ENUM;
-  IdentifierInfo *kw_CF_OPTIONS;
-  IdentifierInfo *kw_NS_ENUM;
-  IdentifierInfo *kw_NS_OPTIONS;
   IdentifierInfo *kw___except;
-
-  // JavaScript keywords.
-  IdentifierInfo *kw_as;
-  IdentifierInfo *kw_async;
-  IdentifierInfo *kw_await;
-  IdentifierInfo *kw_declare;
-  IdentifierInfo *kw_finally;
-  IdentifierInfo *kw_from;
-  IdentifierInfo *kw_function;
-  IdentifierInfo *kw_import;
-  IdentifierInfo *kw_is;
-  IdentifierInfo *kw_let;
-  IdentifierInfo *kw_module;
-  IdentifierInfo *kw_type;
-  IdentifierInfo *kw_var;
-  IdentifierInfo *kw_yield;
-
-  // Java keywords.
-  IdentifierInfo *kw_abstract;
-  IdentifierInfo *kw_assert;
-  IdentifierInfo *kw_extends;
-  IdentifierInfo *kw_implements;
-  IdentifierInfo *kw_instanceof;
-  IdentifierInfo *kw_interface;
-  IdentifierInfo *kw_native;
-  IdentifierInfo *kw_package;
-  IdentifierInfo *kw_synchronized;
-  IdentifierInfo *kw_throws;
 
   // Pragma keywords.
   IdentifierInfo *kw_mark;
-
-  // Proto keywords.
-  IdentifierInfo *kw_extend;
-  IdentifierInfo *kw_option;
-  IdentifierInfo *kw_optional;
-  IdentifierInfo *kw_repeated;
-  IdentifierInfo *kw_required;
-  IdentifierInfo *kw_returns;
-
-  // QT keywords.
-  IdentifierInfo *kw_signals;
-  IdentifierInfo *kw_qsignals;
-  IdentifierInfo *kw_slots;
-  IdentifierInfo *kw_qslots;
 };
 
 } // namespace format

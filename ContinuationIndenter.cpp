@@ -460,8 +460,7 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
   // goes for wrapping before the lambda return type arrow.
   if (!Current.is(TT_LambdaArrow) &&
       (Current.NestingLevel != 0 || !PreviousNonComment ||
-       !PreviousNonComment->is(tok::equal) ||
-       !Current.isOneOf(Keywords.kw_async, Keywords.kw_function)))
+       !PreviousNonComment->is(tok::equal)))
     State.Stack.back().NestedBlockIndent = State.Column;
 
   if (NextNonComment->isMemberAccess()) {
@@ -581,9 +580,6 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     return State.Stack.back().Indent;
   if (NextNonComment->isStringLiteral() && State.StartOfStringLiteral != 0)
     return State.StartOfStringLiteral;
-  if (NextNonComment->is(TT_ObjCStringLiteral) &&
-      State.StartOfStringLiteral != 0)
-    return State.StartOfStringLiteral - 1;
   if (NextNonComment->is(tok::lessless) &&
       State.Stack.back().FirstLessLess != 0)
     return State.Stack.back().FirstLessLess;

@@ -208,7 +208,7 @@ private:
         return false;
 
       if (CurrentToken->is(tok::l_brace))
-        Left->Type = TT_Unknown; // Not TT_ObjCBlockLParen
+        Left->Type = TT_Unknown;
       if (CurrentToken->is(tok::comma) && CurrentToken->Next &&
           !CurrentToken->Next->HasUnescapedNewline &&
           !CurrentToken->Next->isTrailingComment())
@@ -310,12 +310,6 @@ private:
           return false;
         updateParameterCount(Left, CurrentToken);
         if (CurrentToken->isOneOf(tok::colon, tok::l_brace)) {
-          FormatToken *Previous = CurrentToken->getPreviousNonComment();
-          if ((CurrentToken->is(tok::colon) &&
-                (!Contexts.back().ColonIsDictLiteral)) &&
-              (Previous->Tok.getIdentifierInfo() ||
-               Previous->is(tok::string_literal)))
-            Previous->Type = TT_SelectorName;
           if (CurrentToken->is(tok::colon))
             Left->Type = TT_DictLiteral;
         }
@@ -522,13 +516,11 @@ private:
 
   void parsePragma() {
     next(); // Consume "pragma".
-    if (CurrentToken &&
-        CurrentToken->isOneOf(Keywords.kw_mark, Keywords.kw_option)) {
-      bool IsMark = CurrentToken->is(Keywords.kw_mark);
+    if (CurrentToken && CurrentToken->is(Keywords.kw_mark)) {
       next(); // Consume "mark".
       next(); // Consume first token (so we fix leading whitespace).
       while (CurrentToken) {
-        if (IsMark || CurrentToken->Previous->is(TT_BinaryOperator))
+        if (CurrentToken->Previous->is(TT_BinaryOperator))
           CurrentToken->Type = TT_ImplicitStringLiteral;
         next();
       }
@@ -630,7 +622,7 @@ private:
     // recovered from an error (e.g. failure to find the matching >).
     if (!CurrentToken->isOneOf(TT_LambdaLSquare, TT_ForEachMacro,
                                TT_FunctionLBrace, TT_ImplicitStringLiteral,
-                               TT_InlineASMBrace, TT_JsFatArrow, TT_LambdaArrow,
+                               TT_InlineASMBrace, TT_LambdaArrow,
                                TT_OverloadedOperator, TT_RegexLiteral,
                                TT_TemplateString))
       CurrentToken->Type = TT_Unknown;
@@ -691,9 +683,6 @@ private:
   void modifyContext(const FormatToken &Current) {
     if (Current.getPrecedence() == prec::Assignment &&
         !Line.First->isOneOf(tok::kw_template, tok::kw_using, tok::kw_return) &&
-        // Type aliases use `type X = ...;` in TypeScript.
-        !(Style.Language == FormatStyle::LK_JavaScript &&
-          Line.startsWith(Keywords.kw_type, tok::identifier)) &&
         (!Current.Previous || Current.Previous->isNot(tok::kw_operator))) {
       Contexts.back().IsExpression = true;
       if (!Line.startsWith(TT_UnaryOperator)) {
@@ -721,8 +710,8 @@ private:
       Contexts.back().IsExpression = true;
     } else if (Current.is(TT_TrailingReturnArrow)) {
       Contexts.back().IsExpression = false;
-    } else if (Current.is(TT_LambdaArrow) || Current.is(Keywords.kw_assert)) {
-      Contexts.back().IsExpression = Style.Language == FormatStyle::LK_Java;
+    } else if (Current.is(TT_LambdaArrow)) {
+      Contexts.back().IsExpression = false;
     } else if (Current.Previous &&
                Current.Previous->is(TT_CtorInitializerColon)) {
       Contexts.back().IsExpression = true;
@@ -750,9 +739,7 @@ private:
     // Line.MightBeFunctionDecl can only be true after the parentheses of a
     // function declaration have been found. In this case, 'Current' is a
     // trailing token of this declaration and thus cannot be a name.
-    if (Current.is(Keywords.kw_instanceof)) {
-      Current.Type = TT_BinaryOperator;
-    } else if (isStartOfName(Current) &&
+    if (isStartOfName(Current) &&
                (!Line.MightBeFunctionDecl || Current.NestingLevel != 0)) {
       Contexts.back().FirstStartOfName = &Current;
       Current.Type = TT_StartOfName;
@@ -862,9 +849,7 @@ private:
   /// \brief Determine whether ')' is ending a cast.
   bool rParenEndsCast(const FormatToken &Tok) {
     // C-style casts are only used in C++ and Java.
-    if (Style.Language != FormatStyle::LK_Cpp &&
-        Style.Language != FormatStyle::LK_ObjC &&
-        Style.Language != FormatStyle::LK_Java)
+    if (Style.Language != FormatStyle::LK_Cpp)
       return false;
 
     // Empty parens aren't casts and there are no casts at the end of the line.
@@ -1115,13 +1100,6 @@ public:
 
       int CurrentPrecedence = getCurrentPrecedence();
 
-      if (Current && Current->is(TT_SelectorName) &&
-          Precedence == CurrentPrecedence) {
-        if (LatestOperator)
-          addFakeParenthesis(Start, prec::Level(Precedence));
-        Start = Current;
-      }
-
       // At the end of the line or when an operator with higher precedence is
       // found, insert fake parenthesis and return.
       if (!Current || (Current->closesScope() && Current->MatchingParen) ||
@@ -1175,12 +1153,7 @@ private:
         return prec::Comma;
       if (Current->is(TT_LambdaArrow))
         return prec::Comma;
-      if (Current->is(TT_JsFatArrow))
-        return prec::Assignment;
-      if (Current->isOneOf(tok::semi, TT_InlineASMColon, TT_SelectorName,
-                           TT_JsComputedPropertyName) ||
-          (Current->is(tok::comment) && NextNonComment &&
-           NextNonComment->is(TT_SelectorName)))
+      if (Current->isOneOf(tok::semi, TT_InlineASMColon))
         return 0;
       if (Current->is(TT_RangeBasedForLoopColon))
         return prec::Comma;
@@ -1618,11 +1591,6 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
   if (Line.startsWith(tok::kw_for) && Left.is(tok::equal))
     return 4;
 
-  // In Objective-C method expressions, prefer breaking before "param:" over
-  // breaking after it.
-  if (Right.is(TT_SelectorName))
-    return 0;
-
   if (Left.is(tok::l_paren) && InFunctionDecl &&
       Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign)
     return 100;
@@ -1840,8 +1808,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   // If the next token is a binary operator or a selector name, we have
   // incorrectly classified the parenthesis as a cast. FIXME: Detect correctly.
   if (Left.is(TT_CastRParen))
-    return Style.SpaceAfterCStyleCast ||
-           Right.isOneOf(TT_BinaryOperator, TT_SelectorName);
+    return Style.SpaceAfterCStyleCast || Right.is(TT_BinaryOperator);
 
   if (Left.is(tok::greater) && Right.is(tok::greater))
     return Right.is(TT_TemplateCloser) && Left.is(TT_TemplateCloser) &&
@@ -1947,8 +1914,6 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     return (Line.startsWith(tok::kw_enum) && Style.BraceWrapping.AfterEnum) ||
            (Line.startsWith(tok::kw_class) && Style.BraceWrapping.AfterClass) ||
            (Line.startsWith(tok::kw_struct) && Style.BraceWrapping.AfterStruct);
-  if (Left.is(TT_ObjCBlockLBrace) && !Style.AllowShortBlocksOnASingleLine)
-    return true;
 
   return false;
 }
@@ -1988,8 +1953,6 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     return false;
   if (Left.is(tok::colon) && Left.is(TT_DictLiteral))
     return true;
-  if (Right.is(TT_SelectorName))
-    return Left.isNot(tok::period); // FIXME: Properly parse ObjC calls.
   if (Left.ClosesTemplateDeclaration || Left.is(TT_FunctionAnnotationRParen))
     return true;
   if (Right.isOneOf(TT_RangeBasedForLoopColon, TT_OverloadedOperatorLParen,
