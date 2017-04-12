@@ -49,11 +49,6 @@ namespace yaml {
 template <> struct ScalarEnumerationTraits<FormatStyle::LanguageKind> {
   static void enumeration(IO &IO, FormatStyle::LanguageKind &Value) {
     IO.enumCase(Value, "Cpp", FormatStyle::LK_Cpp);
-    IO.enumCase(Value, "Java", FormatStyle::LK_Java);
-    IO.enumCase(Value, "JavaScript", FormatStyle::LK_JavaScript);
-    IO.enumCase(Value, "ObjC", FormatStyle::LK_ObjC);
-    IO.enumCase(Value, "Proto", FormatStyle::LK_Proto);
-    IO.enumCase(Value, "TableGen", FormatStyle::LK_TableGen);
   }
 };
 
@@ -291,8 +286,6 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.BreakBeforeTernaryOperators);
     IO.mapOptional("BreakConstructorInitializersBeforeComma",
                    Style.BreakConstructorInitializersBeforeComma);
-    IO.mapOptional("BreakAfterJavaFieldAnnotations",
-                   Style.BreakAfterJavaFieldAnnotations);
     IO.mapOptional("BreakStringLiterals", Style.BreakStringLiterals);
     IO.mapOptional("ColumnLimit", Style.ColumnLimit);
     IO.mapOptional("CommentPragmas", Style.CommentPragmas);
@@ -313,18 +306,12 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("IndentWidth", Style.IndentWidth);
     IO.mapOptional("IndentWrappedFunctionNames",
                    Style.IndentWrappedFunctionNames);
-    IO.mapOptional("JavaScriptQuotes", Style.JavaScriptQuotes);
-    IO.mapOptional("JavaScriptWrapImports", Style.JavaScriptWrapImports);
     IO.mapOptional("KeepEmptyLinesAtTheStartOfBlocks",
                    Style.KeepEmptyLinesAtTheStartOfBlocks);
     IO.mapOptional("MacroBlockBegin", Style.MacroBlockBegin);
     IO.mapOptional("MacroBlockEnd", Style.MacroBlockEnd);
     IO.mapOptional("MaxEmptyLinesToKeep", Style.MaxEmptyLinesToKeep);
     IO.mapOptional("NamespaceIndentation", Style.NamespaceIndentation);
-    IO.mapOptional("ObjCBlockIndentWidth", Style.ObjCBlockIndentWidth);
-    IO.mapOptional("ObjCSpaceAfterProperty", Style.ObjCSpaceAfterProperty);
-    IO.mapOptional("ObjCSpaceBeforeProtocolList",
-                   Style.ObjCSpaceBeforeProtocolList);
     IO.mapOptional("PenaltyBreakBeforeFirstCallParameter",
                    Style.PenaltyBreakBeforeFirstCallParameter);
     IO.mapOptional("PenaltyBreakComment", Style.PenaltyBreakComment);
@@ -532,20 +519,14 @@ FormatStyle getLLVMStyle() {
   LLVMStyle.IndentCaseLabels = false;
   LLVMStyle.IndentWrappedFunctionNames = false;
   LLVMStyle.IndentWidth = 2;
-  LLVMStyle.JavaScriptQuotes = FormatStyle::JSQS_Leave;
-  LLVMStyle.JavaScriptWrapImports = true;
   LLVMStyle.TabWidth = 8;
   LLVMStyle.MaxEmptyLinesToKeep = 1;
   LLVMStyle.KeepEmptyLinesAtTheStartOfBlocks = true;
   LLVMStyle.NamespaceIndentation = FormatStyle::NI_None;
-  LLVMStyle.ObjCBlockIndentWidth = 2;
-  LLVMStyle.ObjCSpaceAfterProperty = false;
-  LLVMStyle.ObjCSpaceBeforeProtocolList = true;
   LLVMStyle.PointerAlignment = FormatStyle::PAS_Right;
   LLVMStyle.SpacesBeforeTrailingComments = 1;
   LLVMStyle.Standard = FormatStyle::LS_Cpp11;
   LLVMStyle.UseTab = FormatStyle::UT_Never;
-  LLVMStyle.JavaScriptQuotes = FormatStyle::JSQS_Leave;
   LLVMStyle.ReflowComments = true;
   LLVMStyle.SpacesInParentheses = false;
   LLVMStyle.SpacesInSquareBrackets = false;
@@ -587,8 +568,6 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   GoogleStyle.IncludeIsMainRegex = "([-_](test|unittest))?$";
   GoogleStyle.IndentCaseLabels = true;
   GoogleStyle.KeepEmptyLinesAtTheStartOfBlocks = false;
-  GoogleStyle.ObjCSpaceAfterProperty = false;
-  GoogleStyle.ObjCSpaceBeforeProtocolList = false;
   GoogleStyle.PointerAlignment = FormatStyle::PAS_Left;
   GoogleStyle.SpacesBeforeTrailingComments = 2;
   GoogleStyle.Standard = FormatStyle::LS_Auto;
@@ -596,58 +575,17 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   GoogleStyle.PenaltyReturnTypeOnItsOwnLine = 200;
   GoogleStyle.PenaltyBreakBeforeFirstCallParameter = 1;
 
-  if (Language == FormatStyle::LK_Java) {
-    GoogleStyle.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
-    GoogleStyle.AlignOperands = false;
-    GoogleStyle.AlignTrailingComments = false;
-    GoogleStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Empty;
-    GoogleStyle.AllowShortIfStatementsOnASingleLine = false;
-    GoogleStyle.AlwaysBreakBeforeMultilineStrings = false;
-    GoogleStyle.BreakBeforeBinaryOperators = FormatStyle::BOS_NonAssignment;
-    GoogleStyle.ColumnLimit = 100;
-    GoogleStyle.SpaceAfterCStyleCast = true;
-    GoogleStyle.SpacesBeforeTrailingComments = 1;
-  } else if (Language == FormatStyle::LK_JavaScript) {
-    GoogleStyle.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
-    GoogleStyle.AlignOperands = false;
-    GoogleStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Empty;
-    GoogleStyle.AlwaysBreakBeforeMultilineStrings = false;
-    GoogleStyle.BreakBeforeTernaryOperators = false;
-    GoogleStyle.CommentPragmas =
-        "(taze:|@(export|requirecss|return|returns|see|visibility)) ";
-    GoogleStyle.MaxEmptyLinesToKeep = 3;
-    GoogleStyle.NamespaceIndentation = FormatStyle::NI_All;
-    GoogleStyle.SpacesInContainerLiterals = false;
-    GoogleStyle.JavaScriptQuotes = FormatStyle::JSQS_Single;
-    GoogleStyle.JavaScriptWrapImports = false;
-  } else if (Language == FormatStyle::LK_Proto) {
-    GoogleStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
-    GoogleStyle.SpacesInContainerLiterals = false;
-  } else if (Language == FormatStyle::LK_ObjC) {
-    GoogleStyle.ColumnLimit = 100;
-  }
-
   return GoogleStyle;
 }
 
 FormatStyle getChromiumStyle(FormatStyle::LanguageKind Language) {
   FormatStyle ChromiumStyle = getGoogleStyle(Language);
-  if (Language == FormatStyle::LK_Java) {
-    ChromiumStyle.AllowShortIfStatementsOnASingleLine = true;
-    ChromiumStyle.BreakAfterJavaFieldAnnotations = true;
-    ChromiumStyle.ContinuationIndentWidth = 8;
-    ChromiumStyle.IndentWidth = 4;
-  } else if (Language == FormatStyle::LK_JavaScript) {
-    ChromiumStyle.AllowShortIfStatementsOnASingleLine = false;
-    ChromiumStyle.AllowShortLoopsOnASingleLine = false;
-  } else {
-    ChromiumStyle.AllowAllParametersOfDeclarationOnNextLine = false;
-    ChromiumStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
-    ChromiumStyle.AllowShortIfStatementsOnASingleLine = false;
-    ChromiumStyle.AllowShortLoopsOnASingleLine = false;
-    ChromiumStyle.BinPackParameters = false;
-    ChromiumStyle.DerivePointerAlignment = false;
-  }
+  ChromiumStyle.AllowAllParametersOfDeclarationOnNextLine = false;
+  ChromiumStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
+  ChromiumStyle.AllowShortIfStatementsOnASingleLine = false;
+  ChromiumStyle.AllowShortLoopsOnASingleLine = false;
+  ChromiumStyle.BinPackParameters = false;
+  ChromiumStyle.DerivePointerAlignment = false;
   ChromiumStyle.SortIncludes = false;
   return ChromiumStyle;
 }
@@ -669,8 +607,6 @@ FormatStyle getMozillaStyle() {
   MozillaStyle.ContinuationIndentWidth = 2;
   MozillaStyle.Cpp11BracedListStyle = false;
   MozillaStyle.IndentCaseLabels = true;
-  MozillaStyle.ObjCSpaceAfterProperty = true;
-  MozillaStyle.ObjCSpaceBeforeProtocolList = false;
   MozillaStyle.PenaltyReturnTypeOnItsOwnLine = 200;
   MozillaStyle.PointerAlignment = FormatStyle::PAS_Left;
   MozillaStyle.SpaceAfterTemplateKeyword = false;
@@ -690,8 +626,6 @@ FormatStyle getWebKitStyle() {
   Style.ColumnLimit = 0;
   Style.IndentWidth = 4;
   Style.NamespaceIndentation = FormatStyle::NI_Inner;
-  Style.ObjCBlockIndentWidth = 4;
-  Style.ObjCSpaceAfterProperty = true;
   Style.PointerAlignment = FormatStyle::PAS_Left;
   return Style;
 }
@@ -1262,8 +1196,7 @@ public:
       CategoryRegexs.emplace_back(Category.Regex);
     IsMainFile = FileName.endswith(".c") || FileName.endswith(".cc") ||
                  FileName.endswith(".cpp") || FileName.endswith(".c++") ||
-                 FileName.endswith(".cxx") || FileName.endswith(".m") ||
-                 FileName.endswith(".mm");
+                 FileName.endswith(".cxx");
   }
 
   // Returns the priority of the category which \p IncludeName belongs to.
@@ -1761,17 +1694,6 @@ const char *StyleOptionHelpDescription =
     "  -style=\"{BasedOnStyle: llvm, IndentWidth: 8}\"";
 
 static FormatStyle::LanguageKind getLanguageByFileName(StringRef FileName) {
-  if (FileName.endswith(".java"))
-    return FormatStyle::LK_Java;
-  if (FileName.endswith_lower(".js") || FileName.endswith_lower(".ts"))
-    return FormatStyle::LK_JavaScript; // JavaScript or TypeScript.
-  if (FileName.endswith(".m") || FileName.endswith(".mm"))
-    return FormatStyle::LK_ObjC;
-  if (FileName.endswith_lower(".proto") ||
-      FileName.endswith_lower(".protodevel"))
-    return FormatStyle::LK_Proto;
-  if (FileName.endswith_lower(".td"))
-    return FormatStyle::LK_TableGen;
   return FormatStyle::LK_Cpp;
 }
 
@@ -1783,13 +1705,6 @@ FormatStyle getStyle(StringRef StyleName, StringRef FileName,
   }
   FormatStyle Style = getLLVMStyle();
   Style.Language = getLanguageByFileName(FileName);
-
-  // This is a very crude detection of whether a header contains ObjC code that
-  // should be improved over time and probably be done on tokens, not one the
-  // bare content of the file.
-  if (Style.Language == FormatStyle::LK_Cpp && FileName.endswith(".h") &&
-      (Code.contains("\n- (") || Code.contains("\n+ (")))
-    Style.Language = FormatStyle::LK_ObjC;
 
   if (!getPredefinedStyle(FallbackStyle, Style.Language, &Style)) {
     llvm::errs() << "Invalid fallback style \"" << FallbackStyle

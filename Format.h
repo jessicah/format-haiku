@@ -286,9 +286,6 @@ struct FormatStyle {
   /// the commas with the colon.
   bool BreakConstructorInitializersBeforeComma;
 
-  /// \brief Break after each annotation on a field in Java files.
-  bool BreakAfterJavaFieldAnnotations;
-
   /// \brief Allow breaking string literals when formatting.
   bool BreakStringLiterals;
 
@@ -431,23 +428,6 @@ struct FormatStyle {
   /// type.
   bool IndentWrappedFunctionNames;
 
-  /// \brief Quotation styles for JavaScript strings. Does not affect template
-  /// strings.
-  enum JavaScriptQuoteStyle {
-    /// Leave string quotes as they are.
-    JSQS_Leave,
-    /// Always use single quotes.
-    JSQS_Single,
-    /// Always use double quotes.
-    JSQS_Double
-  };
-
-  /// \brief The JavaScriptQuoteStyle to use for JavaScript strings.
-  JavaScriptQuoteStyle JavaScriptQuotes;
-
-  /// \brief Whether to wrap JavaScript import/export statements.
-  bool JavaScriptWrapImports;
-
   /// \brief If true, empty lines at the start of blocks are kept.
   bool KeepEmptyLinesAtTheStartOfBlocks;
 
@@ -460,18 +440,7 @@ struct FormatStyle {
     /// Do not use.
     LK_None,
     /// Should be used for C, C++, ObjectiveC, ObjectiveC++.
-    LK_Cpp,
-    /// Should be used for Java.
-    LK_Java,
-    /// Should be used for JavaScript.
-    LK_JavaScript,
-    /// Should be used for ObjC code.
-    LK_ObjC,
-    /// Should be used for Protocol Buffers
-    /// (https://developers.google.com/protocol-buffers/).
-    LK_Proto,
-    /// Should be used for TableGen code.
-    LK_TableGen
+    LK_Cpp
   };
 
   /// \brief Language, this format style is targeted at.
@@ -498,17 +467,6 @@ struct FormatStyle {
 
   /// \brief The indentation used for namespaces.
   NamespaceIndentationKind NamespaceIndentation;
-
-  /// \brief The number of characters to use for indentation of ObjC blocks.
-  unsigned ObjCBlockIndentWidth;
-
-  /// \brief Add a space after ``@property`` in Objective-C, i.e. use
-  /// ``@property (readonly)`` instead of ``@property(readonly)``.
-  bool ObjCSpaceAfterProperty;
-
-  /// \brief Add a space in front of an Objective-C protocol list, i.e. use
-  /// ``Foo <Protocol>`` instead of ``Foo<Protocol>``.
-  bool ObjCSpaceBeforeProtocolList;
 
   /// \brief The penalty for breaking a function call after ``call(``.
   unsigned PenaltyBreakBeforeFirstCallParameter;
@@ -683,17 +641,12 @@ struct FormatStyle {
            IndentCaseLabels == R.IndentCaseLabels &&
            IndentWidth == R.IndentWidth && Language == R.Language &&
            IndentWrappedFunctionNames == R.IndentWrappedFunctionNames &&
-           JavaScriptQuotes == R.JavaScriptQuotes &&
-           JavaScriptWrapImports == R.JavaScriptWrapImports &&
            KeepEmptyLinesAtTheStartOfBlocks ==
                R.KeepEmptyLinesAtTheStartOfBlocks &&
            MacroBlockBegin == R.MacroBlockBegin &&
            MacroBlockEnd == R.MacroBlockEnd &&
            MaxEmptyLinesToKeep == R.MaxEmptyLinesToKeep &&
            NamespaceIndentation == R.NamespaceIndentation &&
-           ObjCBlockIndentWidth == R.ObjCBlockIndentWidth &&
-           ObjCSpaceAfterProperty == R.ObjCSpaceAfterProperty &&
-           ObjCSpaceBeforeProtocolList == R.ObjCSpaceBeforeProtocolList &&
            PenaltyBreakBeforeFirstCallParameter ==
                R.PenaltyBreakBeforeFirstCallParameter &&
            PenaltyBreakComment == R.PenaltyBreakComment &&
@@ -870,12 +823,6 @@ inline StringRef getLanguageName(FormatStyle::LanguageKind Language) {
   switch (Language) {
   case FormatStyle::LK_Cpp:
     return "C++";
-  case FormatStyle::LK_Java:
-    return "Java";
-  case FormatStyle::LK_JavaScript:
-    return "JavaScript";
-  case FormatStyle::LK_Proto:
-    return "Proto";
   default:
     return "Unknown";
   }
