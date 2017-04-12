@@ -27,9 +27,6 @@ namespace format {
 enum LineType {
   LT_Invalid,
   LT_ImportStatement,
-  LT_ObjCDecl, // An @interface, @implementation, or @protocol line.
-  LT_ObjCMethodDecl,
-  LT_ObjCProperty, // An @property line.
   LT_Other,
   LT_PreprocessorDirective,
   LT_VirtualFunctionDecl
