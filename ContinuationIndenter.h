@@ -153,8 +153,8 @@ struct ParenState {
         AvoidBinPacking(AvoidBinPacking), BreakBeforeParameter(false),
         NoLineBreak(NoLineBreak), LastOperatorWrapped(true),
         ContainsLineBreak(false), ContainsUnwrappedBuilder(false),
-        AlignColons(true), ObjCSelectorNameFound(false),
-        HasMultipleNestedBlocks(false), NestedBlockInlined(false) {}
+        AlignColons(true), HasMultipleNestedBlocks(false),
+        NestedBlockInlined(false) {}
 
   /// \brief The position to which a specific parenthesis level needs to be
   /// indented.
@@ -245,13 +245,6 @@ struct ParenState {
   /// Not considered for memoization as it will always have the same value at
   /// the same token.
   bool AlignColons : 1;
-
-  /// \brief \c true if at least one selector name was found in the current
-  /// ObjC method expression.
-  ///
-  /// Not considered for memoization as it will always have the same value at
-  /// the same token.
-  bool ObjCSelectorNameFound : 1;
 
   /// \brief \c true if there are multiple nested blocks inside these parens.
   ///
