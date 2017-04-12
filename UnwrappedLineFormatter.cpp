@@ -86,9 +86,6 @@ private:
   /// For example, 'public:' labels in classes are offset by 1 or 2
   /// characters to the left from their level.
   int getIndentOffset(const FormatToken &RootToken) {
-    if (Style.Language == FormatStyle::LK_Java ||
-        Style.Language == FormatStyle::LK_JavaScript)
-      return 0;
     if (RootToken.isAccessSpecifier(false) ||
         RootToken.isObjCAccessSpecifier() ||
         (RootToken.isOneOf(Keywords.kw_signals, Keywords.kw_qsignals) &&
@@ -324,9 +321,9 @@ private:
     // Don't merge ObjC @ keywords and methods.
     // FIXME: If an option to allow short exception handling clauses on a single
     // line is added, change this to not return for @try and friends.
-    if (Style.Language != FormatStyle::LK_Java &&
-        Line.First->isOneOf(tok::at, tok::minus, tok::plus))
-      return 0;
+    //if (Style.Language != FormatStyle::LK_Java &&
+    //    Line.First->isOneOf(tok::at, tok::minus, tok::plus))
+    //  return 0;
 
     // Check that the current line allows merging. This depends on whether we
     // are in a control flow statements as well as several style flags.
@@ -632,11 +629,6 @@ public:
   unsigned formatLine(const AnnotatedLine &Line, unsigned FirstIndent,
                       bool DryRun) override {
     LineState State = Indenter->getInitialState(FirstIndent, &Line, DryRun);
-
-    // If the ObjC method declaration does not fit on a line, we should format
-    // it with one arg per line.
-    if (State.Line->Type == LT_ObjCMethodDecl)
-      State.Stack.back().BreakBeforeParameter = true;
 
     // Find best solution in solution space.
     return analyzeSolutionSpace(State, DryRun);
