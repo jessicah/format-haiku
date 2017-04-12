@@ -917,6 +917,7 @@ void UnwrappedLineFormatter::formatFirstToken(FormatToken &RootToken,
   }
   unsigned Newlines =
       std::min(RootToken.NewlinesBefore, Style.MaxEmptyLinesToKeep + 1);
+
   // Remove empty lines before "}" where applicable.
   if (RootToken.is(tok::r_brace) &&
       (!RootToken.Next ||
@@ -927,11 +928,22 @@ void UnwrappedLineFormatter::formatFirstToken(FormatToken &RootToken,
   if (RootToken.IsFirst && !RootToken.HasUnescapedNewline)
     Newlines = 0;
 
+  // Haiku requires two blank lines between functions, etc.
+  if (PreviousLine
+      && PreviousLine->Level == 0 && RootToken.NewlinesBefore > 1
+      && PreviousLine->First->isNot(tok::hash))
+    Newlines = 3;
+
   // Remove empty lines after "{".
   if (!Style.KeepEmptyLinesAtTheStartOfBlocks && PreviousLine &&
       PreviousLine->Last->is(tok::l_brace) &&
       PreviousLine->First->isNot(tok::kw_namespace) &&
       !startsExternCBlock(*PreviousLine))
+    Newlines = 1;
+
+  // Remove empty lines before "{" at top level.
+  if (PreviousLine && RootToken.is(tok::l_brace) && RootToken.NewlinesBefore > 1
+      && PreviousLine->Level == 0)
     Newlines = 1;
 
   // Insert extra new line before access specifiers.

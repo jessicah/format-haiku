@@ -371,6 +371,10 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       Current.FakeLParens.back() > prec::Unknown)
     State.Stack.back().NoLineBreak = true;
 
+  //if (Style.AlignAfterOpenBracket == FormatStyle::BAS_DontAlign &&
+  //    Previous.opensScope())
+  //  State.Stack.back().NoLineBreak = true;
+
   if (Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign &&
       Previous.opensScope() && Previous.isNot(TT_ObjCMethodExpr) &&
       (Current.isNot(TT_LineComment) || Previous.BlockKind == BK_BracedInit))
@@ -421,7 +425,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   } else if (Previous.is(TT_InheritanceColon)) {
     State.Stack.back().Indent = State.Column;
     State.Stack.back().LastSpace = State.Column;
-  } else if (Previous.opensScope()) {
+  } else if (Previous.opensScope() && Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign) {
     // If a function has a trailing call, indent all parameters from the
     // opening parenthesis. This avoids confusing indents like:
     //   OuterFunction(InnerFunctionCall( // break
@@ -611,6 +615,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   if (!NextNonComment)
     NextNonComment = &Current;
 
+
   // Java specific bits.
   if (Style.Language == FormatStyle::LK_Java &&
       Current.isOneOf(Keywords.kw_implements, Keywords.kw_extends))
@@ -708,6 +713,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     // Ensure that we fall back to the continuation indent width instead of
     // just flushing continuations left.
     return State.Stack.back().Indent + Style.ContinuationIndentWidth;
+
   return State.Stack.back().Indent;
 }
 
@@ -753,13 +759,7 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
     }
   }
   if (Current.is(TT_CtorInitializerColon)) {
-    // Indent 2 from the column, so:
-    // SomeClass::SomeClass()
-    //     : First(...), ...
-    //       Next(...)
-    //       ^ line up here.
-    State.Stack.back().Indent =
-        State.Column + (Style.BreakConstructorInitializersBeforeComma ? 0 : 2);
+    State.Stack.back().Indent = State.Column;
     State.Stack.back().NestedBlockIndent = State.Stack.back().Indent;
     if (Style.ConstructorInitializerAllOnOneLineOrOnePerLine)
       State.Stack.back().AvoidBinPacking = true;
@@ -856,7 +856,7 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
         (Style.AlignOperands || *I < prec::Assignment) &&
         (!Previous || Previous->isNot(tok::kw_return) ||
          (Style.Language != FormatStyle::LK_Java && *I > 0)) &&
-        (Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign ||
+        (/*Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign ||*/
          *I != prec::Comma || Current.NestingLevel == 0))
       NewParenState.Indent =
           std::max(std::max(State.Column, NewParenState.Indent),

@@ -1602,6 +1602,20 @@ void TokenAnnotator::setCommentLineLevels(
 
     setCommentLineLevels((*I)->Children);
   }
+
+  AnnotatedLine *PrevNonCommentLine = nullptr;
+  for (SmallVectorImpl<AnnotatedLine *>::iterator I = Lines.begin(),
+                                                  E = Lines.end();
+       I != E; ++I) {
+    if (PrevNonCommentLine && (*I)->First->is(tok::comment) &&
+        (*I)->First->Next == nullptr && (*I)->First->NewlinesBefore == 1 &&
+        PrevNonCommentLine->Last->is(tok::semi))
+      (*I)->Level++;
+    else
+      PrevNonCommentLine = (*I)->First->isNot(tok::l_brace) ? (*I) : nullptr;
+
+    setCommentLineLevels((*I)->Children);
+  }
 }
 
 static unsigned maxNestingDepth(const AnnotatedLine &Line) {
@@ -2415,6 +2429,12 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   if ((Right.isOneOf(TT_CtorInitializerComma, TT_CtorInitializerColon)) &&
       Style.BreakConstructorInitializersBeforeComma &&
       !Style.ConstructorInitializerAllOnOneLineOrOnePerLine)
+    return true;
+  // Haiku breaks after ctor init colon
+  if (Left.is(TT_CtorInitializerColon))
+    return true;
+  // and after each initializer
+  if (Left.is(TT_CtorInitializerComma))
     return true;
   if (Right.is(tok::string_literal) && Right.TokenText.startswith("R\""))
     // Raw string literals are special wrt. line breaks. The author has made a
