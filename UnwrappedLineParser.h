@@ -81,7 +81,6 @@ private:
   void parsePPElse();
   void parsePPEndIf();
   void parsePPUnknown();
-  void readTokenWithJavaScriptASI();
   void parseStructuralElement();
   bool tryToParseBracedList();
   bool parseBracedList(bool ContinueOnSemicolons = false);
@@ -98,16 +97,9 @@ private:
   void parseNew();
   void parseAccessSpecifier();
   bool parseEnum();
-  void parseJavaEnumBody();
   void parseRecord();
-  void parseObjCProtocolList();
-  void parseObjCUntilAtEnd();
-  void parseObjCInterfaceOrImplementation();
-  void parseObjCProtocol();
-  void parseJavaScriptEs6ImportExport();
   bool tryToParseLambda();
   bool tryToParseLambdaIntroducer();
-  void tryToParseJSFunction();
   void addUnwrappedLine();
   bool eof() const;
   void nextToken();
